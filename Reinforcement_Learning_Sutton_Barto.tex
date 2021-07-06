@@ -1,0 +1,1619 @@
+% Created 2021-07-06 Tue 15:03
+% Intended LaTeX compiler: pdflatex
+\documentclass[11pt]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{grffile}
+\usepackage{longtable}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{amssymb}
+\usepackage{capt-of}
+\usepackage{hyperref}
+\usepackage[margin=1in]{geometry}
+\usepackage{float}
+\usepackage[ruled]{algorithm2e}
+\usepackage{algpseudocode}
+\usepackage{bbm}
+\DeclareMathOperator*{\argmax}{argmax}
+\DontPrintSemicolon
+\date{}
+\title{Summary of "Reinforcement Learning" by Sutton \& Barto\\\medskip
+\large Second edition, summarized by Pierre Enel}
+\hypersetup{
+ pdfauthor={Pierre},
+ pdftitle={Summary of "Reinforcement Learning" by Sutton \& Barto},
+ pdfkeywords={},
+ pdfsubject={},
+ pdfcreator={Emacs 26.3 (Org mode 9.4.4)}, 
+ pdflang={English}}
+\begin{document}
+
+\maketitle
+This document contains a summary of the book \emph{Reinforcement Learning: An
+Introduction} by Richard S. Sutton and Andrew G. Barto.\\
+
+The original work is licensed under the Creative Commons
+Attribution-NonCommercial-NoDerivs 2.0 Generic License. To view a copy of this
+license, visit \url{http://creativecommons}. org/licenses/by-nc-nd/2.0/ or send a
+letter to Creative Commons, PO Box 1866, Mountain View, CA 94042, USA.
+
+The original material was modified in the following way: The content is
+shortened, and summarized, either by merely copying portions of the original text
+or by paraphrasing the content into a summarized paragraph. All formulas and
+algorithms are identical to the originals found in the book. This is still work
+in progress, see table of contents.
+
+\clearpage \tableofcontents \clearpage
+
+\section{Introduction}
+\label{sec:org24f3840}
+Introduction chapter not included. It's probably better to read it if you're not
+familiar with reinforcement learning.
+
+Tabular Solution Methods (discrete environment)
+
+\section{Multi-armed Bandits}
+\label{sec:org7d9ab50}
+\subsection{A k-armed Bandit Problem}
+\label{sec:org4ea2f30}
+
+A \emph{k}-armed bandit is a problem in which there are \emph{k} different actions that
+lead to a reward drawn from a stationary probability distribution conditional on
+the chosen action. The goal is to maximize total reward over time.
+
+We denote the action selected on time step \(t\) as \(A_{t}\) , and the
+corresponding reward as \(R_{t}\). The value then of an arbitrary action \(a\),
+denoted \(q_{*}(a)\), is the expected reward given that a is selected:
+\begin{equation}
+q_{*}(a) \doteq \mathbb{E}[R_{t}|A_{t}=a]
+\end{equation}
+
+We assume that you do not know the action values with certainty, although you
+may have estimates. We denote the estimated value of action a at time step \(t\)
+as \(Q_{t}(a)\). We would like \(Q_{t}(a)\) to be close to \(q_{*}(a)\)
+
+A \textbf{greedy} action is the action with the highest estimated value with current
+knowledge. The policy that always chooses \textbf{greedy} actions is the \textbf{greedy
+policy}. greedy actions correspond to a \textbf{exploiting} the current knowledge of
+the values of actions while non greedy actions correspond to an \textbf{exploring}
+behavior. With limited knowledge of the environment, reward can be lower in the
+short term with exploration but will be higher in the long run. It is not
+possible to explore and exploit simultaneously, so there is a conflict or
+trade-off between the two.
+
+\subsection{Action value Methods}
+\label{sec:orgcf3d499}
+
+The \textbf{sample-average} method estimates the \(Q\) values from the history of actions
+and rewards:
+
+\begin{equation}
+Q_{t}(a) \doteq \frac{\mbox{sum of rewards when a taken prior to t}}{\mbox{number of times a taken prior to t}} = \frac{\sum_{i=1}^{t-1} R_i \cdot \mathbbm{1}_{A_i = a}}{\sum_{i=1}^{t-1} \mathbbm{1}_{A_i = a}}
+\end{equation}
+
+where \(1_{predicate}\) denotes the random variable that is 1 if \emph{predicate} is
+true and 0 if it is not. \(Q_t(a)\) converges to \(q_*(a)\).
+
+Greedy actions as defined in the previous section are selected as follow,
+breaking ties randomly:
+
+\begin{equation}
+A_t \doteq \argmax_{a} Q_t(a)
+\end{equation}
+
+where \(argmax_{a}\) denotes the action \(a\) for which the expression that follows
+is maximized. The greedy policy is not exploring, to remediate this, we can use
+the \textbf{\(\epsilon\)-greedy} policy where we explore by randomly selecting an action
+with a small probability \(\epsilon\).
+
+\subsection{The 10-armed Testbed}
+\label{sec:org7bf1798}
+
+This section is about an example of \(\epsilon\)-greedy policies with varying
+\(\epsilon\) values.
+
+\subsection{Incremental Implementation}
+\label{sec:orgba1595d}
+
+\(q\) value can be estimated with:
+\begin{equation}
+Q_{n} \doteq \frac{R_{1} + R_{2} + ... + R_{n-1}}{n-1}
+\end{equation}
+However an incremental approach is more practical:
+\begin{equation}
+Q_{n+1}=Q_{n}+\frac{1}{n}[r_{n}-q_{n}]
+\end{equation}
+
+\begin{algorithm}[H]
+  Initialize, for $a = 1$ to $k$:
+  $Q(a) \leftarrow 0$
+  $N(a) \leftarrow 0$
+
+  \While{True}{
+    $
+      A \leftarrow
+      \begin{cases}
+        \argmax_{a} Q(a) & \text{with probability } 1 - \epsilon \text{ (breaking ties randomly)}\\
+        \text{a random action} & \text{with probability } \epsilon\\
+        \end{cases}
+    $
+    
+    $R \leftarrow bandit(A)$\\
+    $N(A) \leftarrow N(A)+1$\\
+    $Q(A) \leftarrow Q(A)+ \frac{1}{N(A)} [R-Q(A)]$
+  }
+\caption{A simple bandit algorithm}
+\end{algorithm}
+
+\subsection{Tracking a non-stationary problem}
+\label{sec:orgb941ac7}
+
+When we face a non-stationary problem (the environment and thus rewards can
+change), it's better to weigh more recent rewards:
+
+\begin{equation}
+Q_{n+1} \doteq Q_{n} + \alpha [R_{n} - Q_{n}]
+\end{equation}
+
+where the step-size parameter \(\alpha\) \(\in\) (0, 1] is constant. This results in
+\(Q_{n+1}\) being a weighted average of past rewards and the initial \(Q_1\). This
+is sometimes called the \textbf{exponential recency-weighted average}.
+
+\subsection{Optimistic Initial Values}
+\label{sec:orgfc386da}
+
+All the methods discussed so far are dependent on the initial action-value
+estimates, \(Q_1(a)\), which makes them \textbf{biased}. In practice this is generally
+not a problem, but the initial values become another set of parameters that must
+be picked by the user, but can be viewed as some prior knowledge.
+
+\subsection{Upper-Confidence-Bound Action Selection}
+\label{sec:org7da88e3}
+
+\textbf{Upper confidence bound} action selection is a way to explore actions that are
+not greedy but have the most potential to be optimal:
+
+\begin{equation}
+A_t \doteq \argmax_{a} \left[ Q_t(a) + c \sqrt{\frac{\text{ln } t}{N_t(a)}}
+\right]
+\end{equation}
+
+where ln \(t\) denotes the natural logarithm of \(t\), \(N_t(a)\) denotes the number
+of times that action \(a\) has been selected prior to time \(t\), and the number \(x
+> 0\) controls the degree of exploration. If \(N_t(a) = 0\), then \(a\) is considere
+to be a maximizing action.
+
+\subsection{Gradient Bandit Algorithms}
+\label{sec:orgd1267c6}
+
+Actions can be selected according to a \textbf{preference}, independent of the associated
+values.
+
+\begin{equation}
+\text{Pr}\{A_t = a\} \doteq \frac{\exp^{H_t(a)}}{\sum_{b=1}^{k} \exp^{H_t(b)}} \doteq
+\pi_t(a)
+\end{equation}
+
+where \(\pi_t(a)\) is the probability of taking action \(a\) at time \(t\). Note that
+the \textbf{soft-max distribution} is introduced in this equation.
+
+\subsection{Associative Search (Contextual Bandits)}
+\label{sec:orgc7a9c61}
+
+In \textbf{associative search} or \textbf{contextual bandits} tasks, the probability of reward
+for each action changes when the context changes. On way to solve this problem
+is to learn different values for each context.
+
+\section{Finite Markov Decision Processes (MDP)}
+\label{sec:org11427c3}
+\subsection{The Agent-Environment Interface}
+\label{sec:org2d8f529}
+
+In MDPs there is a finite number of states from a set \(\mathcal{S}\) from which
+the agent is at any moment \(t\). We have \(S_{t} \in \mathcal(S)\) for
+\(t=0,1,2,3,{...}\) . Let's define \(A_{t} \in \mathcal{A}(s)\), the set of possible
+actions in state \(s\). In addition, each
+state has a reward \(R_{t} \in \mathcal{R}\) associated to it.
+
+For particular values of these random variables, \(s' \in \mathcal{S}\) and \(r \in
+\mathcal{R}\), there is a probability of those values occurring at time \(t\),
+given particular values of the preceding state and action:
+\begin{equation}
+p(s',r|s,a) \doteq Pr\{S_{t}=s', R_{t}=r \mid S_{t-1}=s, A_{t-1}=a \}
+\end{equation}
+and
+\begin{equation}
+\sum\limits_{s' \in \mathcal{S}} \sum\limits_{r \in \mathcal{R}}
+p(s',r \mid s,a) = 1
+\end{equation}
+for all \(s \in \mathcal{S}\), \(a \in \mathcal{A}(s)\).
+
+\subsection{Goals and Rewards}
+\label{sec:orgb2ae2eb}
+
+The goal of an RL agent is to maximize a signal called \textbf{reward}, a number \(R_t\)
+\(\in\) \(\mathbb{R}\).
+
+The \textbf{reward hypothesis}:\\
+That all of what we mean by goals and purposes can be well thought of as the
+maximization of the expected value of the cumulative sum of a received scalar
+signal (called reward).
+
+\subsection{Returns and Episodes}
+\label{sec:org5cfa180}
+
+We seek to maximize the expected return, where the return is defined as follow:
+\begin{equation}
+G_{t} \doteq R_{t+1}+R_{t+2}+R_{t+3}+{...}+R_{T}
+\end{equation}
+where \(T\) is the final time step. This makes sense if there is indeed a final
+time step. If there is then the agent-environment interaction breaks into
+independent subsequences called \textbf{episodes}, and the last state of an episode is
+the \textbf{terminal state}. These are \textbf{episodic tasks}, in contrast with \textbf{continuing
+tasks} in which we tend to discount future rewards. Here is the \textbf{discounted
+return}:
+\begin{equation}
+G_{t} \doteq R_{t+1} + \gamma R_{t+2} + \gamma^{2} R_{t+3}+{...} = \sum\limits_{k=0}^{\infty} \gamma^{k} R_{t+k+1}
+\end{equation}
+where \(\gamma\) is a parameter, \(0 \leq \gamma \leq 1\), called the \textbf{discount rate}.\\
+Returns at successive time steps are related to each other:
+\begin{equation}
+G_{t} \doteq R_{t+1} + \gamma G_{t+1}
+\end{equation}
+
+\subsection{Unified Notation for Episodic and Continuing Tasks}
+\label{sec:org8d41c43}
+
+In episodic tasks, there is an additional index \(i\) to the variables to refer to
+a specific episode, e.g. \(S_{t,i}\) for the state at time \(t\) of episode \(i\),
+however it's rarely useful.
+
+Episodic and continuing tasks can be unified by adding an \textbf{absorbing state} to
+episodic tasks that always leads to itself and delivers no reward. Here is a
+unified notation for return:
+\begin{equation}
+G_{t} \doteq \sum\limits_{k=t+1}^{T} \gamma^{k-t-1} R_{k}
+\end{equation}
+including the possibility that \(T=\infty\) or \(\gamma = 1\) (but not both).
+
+\subsection{Policies and Value Functions}
+\label{sec:org81ebaa9}
+
+Formally, a policy is a mapping from states to probabilities of selecting each
+possible action. If the agent is following policy \(\pi\) at time \(t\), then
+\(\pi(a|s)\) is the probability that \(A_{t} = a\) if \(S_{t} = s\). Like \(p\), \(\pi\)
+is an ordinary function; the “\(\mid\)” in the middle of \(\pi(a | s)\) merely
+reminds that it defines a probability distribution over \(a \in \mathcal{A}(s)\)
+for each \(s \in \mathcal(S)\). Reinforcement learning methods specify how the
+agent’s policy is changed as a result of its experience.
+
+The value of a state \(s\) under a policy \(\pi\), denoted \(v_{\pi}(s)\), is the
+expected return when starting in \(s\) and following \(\pi\) thereafter. For MDPs,
+we can define \(v_{\pi}\) formally by
+\begin{equation}
+v_{\pi}(s) \doteq \mathbb{E}_{\pi}[G_{t} \mid S_{t}=s] =
+\mathbb{E}_{\pi} \left[ \sum\limits_{k=0}^{\infty} \gamma^{k}R_{t+k+1} \;\middle|\; S_{t}=s \right], \text{ for all } s \in \mathcal(S)
+\end{equation}
+where \(\mathbb{E}_{\pi}[{.}]\) denotes the expected value of a random variable
+given that the agent follows policy \(\pi\), and \(t\) is any time step. \(v_\pi\) is
+the \textbf{state-value function for policy \(\pi\)}.
+
+Similarly, we define the value of taking action \(a\) in state \(s\) under a policy
+\(\pi\), denoted \(q_{\pi}(s, a)\), as the expected return starting from \(s\), taking
+the action \(a\), and thereafter following policy \(\pi\):
+\begin{equation}
+q_{\pi}(s,a) \doteq \mathbb{E}_{\pi}[G_{t} \mid S_{t}=s, A_{t}=a] =
+\mathbb{E}_{\pi} \left[ \sum\limits_{k=0}^{\infty} \gamma^{k}R_{t+k+1} \;\middle|\; S_{t}=s, A_{t}=a \right]
+\end{equation}
+we call \(q_\pi\) the \textbf{action-value function for policy \(\pi\)}.
+
+\(v_\pi\) and \(q_\pi\) can be estimated by experience, for example by averaging the
+returns in each action and state, this kind of method are \textbf{Monte Carlo methods}
+because they involve averaging over many random samples of actual returns.
+
+A fundamental property of value functions used throughout reinforcement learning
+and dynamic programming is that they satisfy recursive relationships similar to
+that which we have already established for the return. For any policy \(\pi\) and
+any state \(s\), the following consistency condition holds between the value of
+\(s\) and the value of its possible successor states:
+\begin{equation}
+\begin{aligned}
+v_{\pi}(s) &\doteq \mathbb{E}_{\pi}[G_{t} \mid S_{t}=s] \\
+           &= \mathbb{E}_{\pi}[R_{t+1} + \gamma G_{t+1} \mid S_{t}=s] \\
+           &= \sum\limits_{a} \pi(a|s) \sum\limits_{s'} \sum\limits_{r}
+           p(s', r | s, a) \left[ r + \gamma \mathbb{E}_{\pi}[G_{t+1}|S_{t+1}=s'] \right]\\
+           &= \sum\limits_{a} \pi(a|s) \sum\limits_{s',r}
+           p(s', r | s, a) \left[ r + \gamma v_{\pi}(s') \right], \text{ for all } s \in \mathcal{S}
+\end{aligned}
+\end{equation}
+where \(a\) \(\in\) \(\mathcal{A}(s)\), the next states \(s'\) \(\in\) \(\mathcal{S}\) and
+\(r\) \(\in\) \(\mathcal{R}\). This is the \textbf{Bellman equation for \(v_\pi\)}.
+
+\subsection{Optimal Policies and Optimal Value Functions}
+\label{sec:org9df5649}
+
+\(\pi_{*}\) is the optimal policy that is better or equal to all other policies.
+Although there may be more than one, they share the same state-value function,
+called the optimal state-value function, denoted \(v_{*}\), and defined as
+
+\begin{equation}
+v_{*}(s) \doteq \max_{\pi} v_{\pi}(s)
+\end{equation}
+for all \(s \in \mathcal{S}\)
+
+Optimal policies also share the same optimal action-value function, denoted
+\(q_{*}\), and defined as
+\begin{equation}
+q_{*}(s,a) \doteq \max_{\pi} q_{\pi}(s,a)
+\end{equation}
+for all \(s \in \mathcal{S}\) and \(a \in \mathcal{A}(s)\)
+
+We can write \(q_{*}\) in terms of \(v_{*}\) as follows:
+\begin{equation}
+q_{*}(s,a) = \mathbb{E} [R_{t+1} + \gamma v_{*}(S_{t+1}) \mid S_{t} = s, A_{t} = a]
+\end{equation}
+
+\subsection{Optimality and Approximation}
+\label{sec:org382737c}
+
+For many problems, optimal policies are rarely reached because their
+computational cost is too high. But for tasks with a limited number of states,
+it is possible to represent all the states in a table, they are the \textbf{tabular}
+cases. Though it is rarely the case that a problem can be expressed with only a
+few states. But in many problems, like the game backgammon, many states have a
+low probability of occurrence so it doesn't matter if the policy is suboptimal
+for these states because they are not likely to occur.
+
+\section{Dynamic Programming}
+\label{sec:orge448b73}
+
+Dynamic programming (DP) is a collection of recursive algorithms to compute
+optimal policies given a perfect model of the environment as a MDP. It's not
+practical for the problems that RL wants to save because of its assumption of a
+perfect model, but it is to inform RL theory and models which follow similar
+principles. The key idea of DP, and RL generally, is the use of value functions
+to organize and structure the search for good policies. We can easily obtain
+optimal policies once we have found the optimal value functions which satisfy
+the Bellman optimality equations:
+
+\begin{equation}
+\begin{aligned}
+v_*(s) &= \max_{a} \mathbb{E}[R_{t+1} + \gamma v_*(S_{t+1}) | S_t = s, A_t = a]\\
+       &= \max_{a} \sum\limits_{s',r} p(s',r|s,a)[r+\gamma v_*(s')]
+\end{aligned}
+\end{equation}
+or
+\begin{equation}
+\begin{aligned}
+q_*(s,a) &= \mathbb{E}[R_{t+1} + \gamma \max_{a'} q_*(S_{t+1}, a') | S_t = s, A_t = a]\\
+       &= \sum\limits_{s',r} p(s',r|s,a)[r+\gamma \max_{q_*}(s',a')]
+\end{aligned}
+\end{equation}
+
+In this chapter, we assume finite MDPs.
+
+\subsection{Policy Evaluation (Prediction)}
+\label{sec:orgef0a72e}
+
+We use the Bellman equation to update the value of a state:
+
+\begin{equation}
+\begin{aligned}
+v_{k+1}(s) &\doteq \mathbb{E}_{\pi} \left[ R_{t+1} + \gamma v_{k}(S_{t+1}) \mid S_{t} = s \right] \\
+           &= \sum\limits_{a} \pi(a|s) \sum\limits_{s',r} p(s',r|s,a) \left[ r + \gamma v_{k}(s') \right]
+\end{aligned}
+\end{equation}
+for all \(s \in \mathcal{S}\)
+
+From this we derive the \textbf{iterative policy evaluation} that allows us to determine
+the value function \(v_{\pi}\) for an arbitrary deterministic policy \(\pi\).
+\newline
+\newline
+\begin{algorithm}[H]
+  \SetKwInOut{Input}{Input}
+  \SetKwInOut{algoparam}{Algorithm parameter}
+
+  \Input{$\pi$, the policy to be evaluated}
+  \algoparam{ a small threshold $\theta > 0$ determining accuracy of estimation}
+  Initialize $V(s)$, for all $s \in \mathcal{S}^{+}$, arbitrarily except that $V(terminal)=0$
+  \newline
+
+  \While{$\Delta < \theta$}{
+    $\Delta \leftarrow 0$\\
+    \For{each $s \in \mathcal(S)$}{
+        $v \leftarrow V(s)$\\
+        $V(s) \leftarrow \sum_{a} \pi(a|s) \sum_{s',r} p(s',r|s,a)[r+\gamma V(s')]$\\
+        $\Delta \leftarrow max(\Delta, |v-V(s)|)$
+    }
+  }
+
+\caption{Iterative Policy Evaluation, for estimating $V \approx v_{\pi}$}
+\end{algorithm}
+
+\subsection{Policy Improvement}
+\label{sec:orgba945e0}
+
+First, here is the greedy policy:
+
+\begin{equation}
+\begin{aligned}
+\pi'(s) &\doteq \argmax_{a} q_{\pi}(s,a) \\
+        &= \argmax_{a} \mathbb{E}[R_{t+1} + \gamma v_{\pi}(S_{t+1}) \mid S_{t}=s, A_{t}=a] \\
+        &= \argmax_{a} \sum\limits_{s',r} p(s',r|s,a)[r+\gamma v_{\pi}(s')]
+\end{aligned}
+\end{equation}
+The process of making a new policy that improves on an original policy, by
+making it greedy with respect to the value function of the original policy, is
+called \textbf{policy improvement}. Policy improvement gives us a strictly better
+policy except when the original policy is already optimal.
+
+\subsection{Policy Iteration}
+\label{sec:org68f5e6f}
+
+Once a policy, \(\pi\), has been improved using \(v_{\pi}\) to yield a better
+policy, \(\pi'\), we can then compute \(v_{\pi'}\) and improve it again to yield an
+even better \(\pi''\). We can thus obtain a sequence of monotonically improving
+policies and value functions:
+
+\begin{equation}
+\pi_{0} \xrightarrow{E} v_{\pi_{0}} \xrightarrow{I} \pi_{1} \xrightarrow{E} v_{\pi_{1}} \xrightarrow{I} 
+\pi_{2} \xrightarrow{E} {...} \xrightarrow{I} \pi_{*} \xrightarrow{E} v_{\pi_{*}}
+\end{equation}
+
+where \(\xrightarrow{E}\) denotes a policy evaluation and \(\xrightarrow{I}\)
+denotes a policy improvement. Each policy is guaranteed to be a strict
+improvement over the previous one (unless it is already optimal). This way of
+finding an optimal policy is called \textbf{policy iteration}.
+\newline
+\newline
+\begin{algorithm}[H]
+
+  1. Initialization \\
+  $V(s) \in \mathbb{R}$ and $\pi(s) \in \mathcal{A}(s)$ arbitrarily for all $s \in \mathcal{S}$ \\
+  \;
+
+  2. Policy Evaluation \\
+  \While{$\Delta < \theta$ (a small positive number determining the accuracy of estimation)}{
+    $\Delta \leftarrow 0$ \\
+    \For{each $s \in \mathcal(S)$}{
+      $v \leftarrow V(s)$ \\
+      $V(s) \leftarrow \sum_{s',r} p(s',r|s,\pi(s))[r+\gamma V(s')]$ \\
+      $\Delta \leftarrow \max(\Delta, |v-V(s)|)$
+    }
+  }
+  \;
+
+  3. Policy Improvement \\
+  $policy$-$stable \leftarrow true$ \\
+  \For{each $s \in \mathcal(S)$}{
+    $old$-$action \leftarrow \pi(s)$ \\
+    $\pi(s) \leftarrow \argmax_{a} \sum_{s',r} p(s',r|s,a)[r+\gamma V(s')]$ \\
+    \If{$old$-$action \ne \pi(s)$}{$policy$-$stable \leftarrow false$}
+  }
+
+\caption{Policy Iteration (using iterative policy evaluation) for estimating $\pi \approx \pi_{*}$}
+\end{algorithm}
+
+\subsection{Value Iteration}
+\label{sec:orgc4bc42c}
+
+One drawback to policy iteration is that each of its iterations involves policy
+evaluation, which may itself be a protracted iterative computation requiring
+multiple sweeps through the state set. The policy evaluation step of policy
+iteration can be truncated in several ways without losing the convergence
+guarantees of policy iteration. One important special case is when policy
+improvement is stopped after just one sweep (one update of each state). This
+algorithm is called \textbf{value iteration}:
+
+\begin{equation}
+\begin{aligned}
+v_{k+1}(s) &\doteq \max_{a} \mathbb{E}[R_{t+1} + \gamma v_{k}(S_{t+1}) \mid S_{t}=s, A_{t}=a]\\
+           &= \max_{a} \sum_{s',r}p(s',r|s,a)[r+\gamma V(s')]
+\end{aligned}
+\end{equation}
+\newline
+\newline
+\begin{algorithm}[H]
+\SetKwInOut{algoparam}{Algorithm parameter}
+\algoparam{ a small threshold $\theta > 0$ determining accuracy of estimation}
+Initialize $V(s)$, for all $s \in \mathcal{S}^{+}$, arbitrarily except that $V(terminal) = 0$ \\
+\;
+
+\While{$\Delta < \theta$}{
+  $\Delta \leftarrow 0$ \\
+  \For{each $s \in \mathcal{S}$}{
+    $v \leftarrow V(s)$ \\
+    $V(s) \leftarrow \max_{a} \sum_{s',r}p(s',r|s,a)[r+\gamma V(s')]$ \\
+    $\Delta \leftarrow \max(\Delta, |v-V(s)|)$ \\
+  }
+}
+\;
+
+Output a deterministic policy, $\pi \approx \pi_{*}$, such that\\
+$\pi(s) = \argmax_{a} \sum_{s',r}p(s',r|s,a)[r+\gamma V(s')]$
+
+\caption{Value Iteration, for estimating $\pi \approx \pi_{*}$}
+\end{algorithm}
+
+\subsection{Asynchronous Dynamic Programming}
+\label{sec:orga2e4b2e}
+
+\textbf{Asynchronous} DP algorithms are in-place iterative DP algorithms that are not
+organized in terms of systematic sweeps of the state set. These algorithms
+update the values of states in any order whatsoever, using whatever values of
+other states happen to be available. The values of some states may be updated
+several times before the values of others are updated once.
+
+\subsection{Generalized Policy Iteration (GPI)}
+\label{sec:orgbe7a0c3}
+
+It is simply the idea of alternating evaluation and policy improvement that
+allow convergence toward a better policy. The previous sections are already
+under the umbrella of the GPI.
+
+\subsection{Efficiency of Dynamic Programming}
+\label{sec:orgcd91282}
+
+DP may not be practical for large problems, but compared with other methods for
+solving MDPs, DP methods are actually quite efficient.
+
+\section{Monte Carlo Methods}
+\label{sec:org0fb157d}
+
+Here we do not assume complete knowledge of the environment, Monte Carlo methods
+require only experience. Monte Carlo methods are ways of solving the
+reinforcement learning problem based on averaging sample returns.
+
+\subsection{Monte Carlo Prediction}
+\label{sec:orgb2cd43d}
+
+To estimate the expected return -- expected cumulative future discounted reward
+-- from experience, then, is simply to average the returns observed after visits
+to that state. Below is a \textbf{first visit MC method} in which the returns for a
+state are calculated as the average of all the returns after the first visit to
+that state.
+\newline
+\newline
+\begin{algorithm}[H]
+\SetKwInOut{Input}{Input}
+\Input{a policy $\pi$ to be evaluated}
+Initialize: \\
+$V(s) \in \mathbb{R}$, arbitrarily, for all $s \in \mathcal{S}$ \\
+$Returns(s) \leftarrow$ an empty list, for all $s \in \mathcal{S}$ \\
+\;
+
+\While{True (for each episode)}{
+  Generate an episode following $\pi$: $S_{0}, A_{0}, R_{1}, S_{1}, A_{1}, R_{2}, {...}, S_{T-1}, A_{T-1}, R_{T}$ \\
+  $G \leftarrow 0$ \\
+  \For{each step of episode, $t = T-1, T-2, {...}, 0$}{
+    $G \leftarrow G + R_{t+1}$ \\
+    \If{$S_{t}$ not in $S_{0}, S_{1}, {...}, S_{t-1}$}{
+      Append $G$ to $Returns(S_{t})$ \\
+      $V(S_{t}) \leftarrow$ average$(Returns(S_{t}))$
+    }
+  }
+}
+\;
+
+\caption{First-visit MC prediction, for estimating $V \approx v_{\pi}$}
+\end{algorithm}
+
+There is also an \textbf{every visit} version of that algorithm, wherein the returns
+are calculated after every visit.
+
+\subsection{Monte Carlo Estimation of Action Values}
+\label{sec:org3a3628b}
+
+If a model is not available, then it is particularly useful to estimate action
+values (the values of state–action pairs) rather than state values. With a
+model, state values alone are sufficient to determine a policy; one simply looks
+ahead one step and chooses whichever action leads to the best combination of
+reward and next state.
+
+To make sure that every state-action pairs are explored, episodes can be started
+at different state-action pairs called \textbf{exploring starts}.
+
+\subsection{Monte Carlo Control}
+\label{sec:org6d7ccbe}
+
+Here is a Monte Carlo version of the classical policy iteration:
+
+\begin{equation}
+\pi_{0} \xrightarrow{E} q_{\pi_{0}} \xrightarrow{I} \pi_{1} \xrightarrow{E} q_{\pi_{1}} \xrightarrow{I}
+\pi_{2} \xrightarrow{E} {...} \xrightarrow{I} \pi_{*} \xrightarrow{E} q_{\pi_{*}}
+\end{equation}
+
+where \(\xrightarrow{E}\) denotes a complete policy evaluation and
+\(\xrightarrow{I}\) denotes a complete policy improvement. Policy evaluation is
+done exactly as described in the preceding section, with many episodes. Policy
+improvement is done by making the policy greedy with respect to the current
+value function. Here is the greedy policy:
+
+\begin{equation}
+\pi(s) \doteq \argmax_{a} q(s,a)
+\end{equation}
+\newline
+\newline
+\begin{algorithm}[H]
+Initialize: \\
+$\pi(s) \in \mathcal{A}(s)$ (arbitrarily), for all $s \in \mathcal{S}$ \\
+$Q(s,a) \in \mathbb{R}$ (arbitrarily), for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$ \\
+$Returns(s, a) \leftarrow$ an empty list, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$ \\
+\;
+
+\While{True (for each episode)}{
+  Choose $S_{0} \in \mathcal{S}$ and $A_{0} \in \mathcal{A}(S_{0})$ such that all pairs have probability $> 0$ (exploring starts) \\
+  Generate an episode starting from $S_{0}, A_{0}$, following $\pi$: $S_{0}, A_{0}, R_{1}, S_{1}, A_{1}, R_{2}, {...}, S_{T-1}, A_{T-1}, R_{T}$ \\
+  $G \leftarrow 0$ \\
+  \For{each step of episode, $t = T-1, T-2, {...}, 0$}{
+    $G \leftarrow G + R_{t+1}$ \\
+    \If{$(S_{t}, A_{t})$ not in $(S_{0}, A_{0}), (S_{1}, A_{1}) {...}, (S_{t-1}, A_{t-1})$}{
+      Append $G$ to $Returns(S_{t}, A_{t})$ \\
+      $Q(S_{t}) \leftarrow$ average($Returns(S_{t}, A_{t})$) \\
+      $\pi(S_{t}) \leftarrow \argmax_{a} Q(S_{t}, a)$
+    }
+  }
+}
+\;
+
+\caption{Monte Carlo ES (Exploring Starts), for estimating $\pi \approx \pi_{*}$}
+\end{algorithm}
+
+\subsection{Monte Carlo Control without Exploring Starts}
+\label{sec:org5287d93}
+
+To explore all state-action values without the unlikely assumption of exploring
+starts, we can force all actions probabilities to be above 0: \(\pi(a|s) > 0\) for all \(s
+\in \mathcal{S}\) and all \(a \in \mathcal{A}(s)\).
+
+An example is the \(\epsilon\)-greedy, where all non greedy actions are given
+the minimal probability of selection, \(\frac{\epsilon}{|\mathcal{A}(s)|}\), and
+the remaining bulk of the probability, \(1 - \epsilon +
+\frac{\epsilon}{|\mathcal{A}(s)|}\), is given to the greedy action. This is an
+example of \(\epsilon{\text -soft}\) policies for which \(\pi(a|s) \geq
+\frac{\epsilon}{|\mathcal{A}(s)|}\) for all states and actions, for some \(1 > \epsilon
+> 0\).
+\newline
+\newline
+\begin{algorithm}[H]
+Algorithm parameter: small $\epsilon > 0$\\
+Initialize: \\
+$\pi \leftarrow$ an arbitrary $\epsilon{\text -}$policy\\
+$Q(s,a) \in \mathbb{R}$ (arbitrarily), for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$ \\
+$Returns(s, a) \leftarrow$ an empty list, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$ \\
+\;
+
+\While{True (for each episode)}{
+  Generate an episode following $\pi$: $S_{0}, A_{0}, R_{1}, S_{1}, A_{1}, R_{2}, {...}, S_{T-1}, A_{T-1}, R_{T}$ \\
+  $G \leftarrow 0$ \\
+  \For{each step of episode, $t = T-1, T-2, {...}, 0$}{
+    $G \leftarrow G + R_{t+1}$ \\
+    \If{$(S_{t}, A_{t}) \notin (S_{0}, A_{0}), (S_{1}, A_{1}) {...}, (S_{t-1}, A_{t-1})$}{
+      Append $G$ to $Returns(S_{t}, A_{t})$ \\
+      $Q(S_{t}, A_{t}) \leftarrow$ average($Returns(S_{t}, A_{t})$) \\
+      $A^{*} \leftarrow \argmax_{a} Q(S_{t}, a)$ \hfill  (with ties broken arbitrarily) \\
+      \For{all $a \in \mathcal{A}(S_{t})$}{
+        $
+          \pi(a|S_{t}) \leftarrow \left\{
+            \begin{array}{ll}
+            1 - \epsilon + \epsilon / |\mathcal{A}(S_{t})| & \mbox{if } a = A^{*} \\
+            \epsilon / |\mathcal{A}(S_{t})|                & \mbox{if } a \neq A^{*} \\
+            \end{array}
+          \right.
+        $
+      }
+    }
+  }
+}
+\;
+
+\caption{On-Policy first-visit MC control (for $\epsilon{\text -}$soft policies), estimates $\pi \approx \pi_{*}$}
+\end{algorithm}
+
+Any \(\epsilon\)-greedy policy with respect to \(q_{\pi}\) is an improvement over any
+\(\epsilon\)-soft policy \(\pi\) (or as good as).
+
+\subsection{Off-policy Prediction via Importance Sampling}
+\label{sec:org5b6c15d}
+
+Exploring actions are necessary to find an optimal policy but are not part of an
+optimal policy, so it is necessary to split policy into a \textbf{target policy}
+(converging towards the optimal policy), and a \textbf{behavior policy} to learn the
+values and improve the target policy. \textbf{On-policy} methods are a special case of
+off-policy where the target and behavior policies are one and the same. With
+\textbf{Off-policy}, the target policy is typically the deterministic greedy policy
+with respect to the current estimate of the action-value function, and
+becomes a deterministic optimal policy, while the behavior policy remains
+stochastic and more exploratory, for example, an \(\epsilon\)-greedy policy. Note
+that the behavior policy must have a nonzero probability of selecting all
+actions that might be selected by the target policy. This is called \textbf{coverage}.
+
+Let's consider the prediction problem in which we want to estimate \(v_{\pi}\) or
+\(q_{\pi}\), and for now let's assume that the target policy \(\pi\) and the behavior
+policy \(b\) are fixed. Almost all off-policy methods utilize \textbf{importance
+sampling}, a general technique for estimating expected values under one
+distribution given samples from another. We apply importance sampling to
+off-policy learning by weighting returns according to the relative probability
+of their trajectories occurring under the target and behavior policies, called
+the \textbf{importance-sampling ratio}.
+
+Given a starting state \(S_{t}\), the probability of the subsequent state–action
+trajectory, \\
+\(A_{t}, S_{t+1}, A_{t+1}, {...}, S_{T}\) occurring under any policy \(\pi\) is
+
+\begin{equation}
+\begin{aligned}
+Pr\{ A_{t}, S_{t+1}, A_{t+1}, {...}, S_{T} \mid S_{t}, A_{t:T-1} \sim \pi \}
+&= \pi(A_{t}|S_{t}) p(S_{t+1}|S_{t}, A_{t}) \pi(A_{t+1}|S_{t+1}) {...} p(S_{T}|S_{T-1}, A_{T-1})\\
+&= \prod\limits_{k=t}^{T-1} \pi(A_{k}|S_{k}) p(S_{k+1}|S_{k}, A_{k})
+\end{aligned}
+\end{equation}
+
+where \(p\) here is the state-transition probability function from the MDP. Thus,
+the relative probability of the trajectory under the target and behavior
+policies (the importance-sampling ratio) is
+
+\begin{equation}
+\rho_{t:T-1} \doteq \frac{\prod_{k=t}^{T-1} \pi(A_{k}|S_{k}) p(S_{k+1}|S_{k}, A_{k})}
+{\prod_{k=t}^{T-1} b(A_{k}|S_{k}) p(S_{k+1}|S_{k}, A_{k})}
+= \prod\limits_{k=t}^{T-1} \frac{\pi(A_{k}|S_{k})}{b(A_{k}|S_{k})}
+\end{equation}
+
+To estimate \(v_{\pi}(s)\), we simply scale the returns by the ratios and average
+the results:
+
+\begin{equation}
+V(s) \doteq \frac{\sum_{t \in \mathcal{T}(s)} \rho_{t:T(t)-1} G_{t}}{|\mathcal{T}(s)|}
+\end{equation}
+
+where \(\mathcal{T}(s)\) are all the time step in which state \(s\) is visited.
+
+But a better alternative is the \textbf{weighted importance sampling}, which is a
+weighted average:
+\begin{equation}
+V(s) \doteq \frac{\sum_{t \in \mathcal{T}(s)} \rho_{t:T(t)-1} G_{t}}
+{\sum_{t \in \mathcal{T}(s)} \rho_{t:T(t)-1}}
+\end{equation}
+It is biased but has a bounded variance which produces better estimates of value
+with fewer episodes.
+
+\subsection{Incremental Implementation}
+\label{sec:orgb854813}
+
+Suppose we have a sequence of returns \(G_1, G_2, {...}, G_{n-1}\), all starting
+in the same state and each with a corresponding random weight \(W_i\) (e.g., \(W_i
+= \rho_{t:T(t)-1}\)). We wish to form the estimate
+\begin{equation}
+V_n \doteq \frac{\sum_{k=1}^{n-1} W_k G_k}
+{\sum_{k=1}^{n-1} W_k}, \quad n \geq 2.
+\end{equation}
+and keep it up-to-date as we obtain a single additional return \(G_n\). In
+addition to keeping track of \(V_n\), we must maintain for each state the
+cumulative sum \(C_n\) of the weights given to the first \(n\) returns. The update
+rule for \(V_n\) is
+\begin{equation}
+V_{n+1} \doteq V_n + \frac{W_n}{C_n} [G_n - V_n], \quad n \geq 1.
+\end{equation}
+and
+\begin{equation}
+C_{n+1} \doteq C_n + W_{n+1},
+\end{equation}
+where \(C_0 \doteq 0\) (and V\textsubscript{1} is arbitrary and thus need not be specified).
+\newline
+\newline
+\begin{algorithm}[H]
+Input: an arbitrary target policy $\pi$ \\
+Initialize, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$: \\
+$\quad Q(s,a) \in \mathbb{R}$ (arbitrarily) \\
+$\quad C(s,a) \leftarrow 0$ \\
+\;
+\While{True (for each episode)}{
+  $b \leftarrow$ any policy with coverage of $\pi$ \\
+  Generate an episode following $b$: $S_{0}, A_{0}, R_{1}, {...}, S_{T-1}, A_{T-1}, R_{T}$ \\
+  $G \leftarrow 0$ \\
+  $W \leftarrow 1$ \\
+  \For{each step of episode, $t = T-1, T-2, {...}, 0$}{
+    $G \leftarrow \gamma G + R_{t+1}$ \\
+    $C(S_t, A_t) \leftarrow C(S_t, A_t) + W$ \\
+    $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{W}{C(S_t, A_t)} [G-Q(S_t, A_t)]$ \\
+    $W \leftarrow W \frac{\pi(A_t|S_t)}{b(A_t|S_t)}$ \\
+    \If{$W = 0$}{exit \textbf{for} loop}
+  }
+}
+\;
+\caption{Off-Policy MC prediction (policy evaluation), estimates $Q \approx q_{\pi}$}
+\end{algorithm}
+
+\subsection{Off-policy Monte Carlo Control}
+\label{sec:org164e599}
+
+The previous section was about off-policy evaluation, now we want to also update
+the target policy.
+\newline
+\newline
+\begin{algorithm}[H]
+Initialize, for all $s \in \mathcal{S}, a \in \mathcal{A}(s)$: \\
+$\quad Q(s,a) \in \mathbb{R}$ (arbitrarily) \\
+$\quad C(s,a) \leftarrow 0$ \\
+$\pi(s) \leftarrow \argmax_{a} Q(s, a) \quad$ (with ties broken consistently)\\
+\;
+\While{True (for each episode)}{
+  $b \leftarrow$ any soft policy with coverage of $\pi$ \\
+  Generate an episode following $b$: $S_{0}, A_{0}, R_{1}, {...}, S_{T-1}, A_{T-1}, R_{T}$ \\
+  $G \leftarrow 0$ \\
+  $W \leftarrow 1$ \\
+  \For{each step of episode, $t = T-1, T-2, {...}, 0$}{
+    $G \leftarrow \gamma G + R_{t+1}$ \\
+    $C(S_t, A_t) \leftarrow C(S_t, A_t) + W$ \\
+    $Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \frac{W}{C(S_t, A_t)} [G-Q(S_t, A_t)]$ \\
+    $\pi(S_t) \leftarrow \argmax_a Q(S_t, a) \quad$ (with ties broken consistently) \\
+    \If{$A_t \neq \pi(S_t)$}{exit \textbf{for} loop}
+    $W \leftarrow W \frac{1}{b(A_t|S_t)}$ \\
+  }
+}
+\;
+\caption{Off-Policy MC prediction (policy evaluation), estimates $Q \approx q_{\pi}$}
+\end{algorithm}
+
+\section{Temporal-Difference Learning}
+\label{sec:org9f320a2}
+
+Temporal-difference (TD) learning uses concepts from dynamic programming and
+Monte Carlo (MC) methods. They are all based on the generalized policy iteration, so
+the main difference is on the evaluation or prediction problem.
+
+\subsection{TD Prediction}
+\label{sec:org14475bd}
+
+MC methods wait until the return following the visit is known, then use that
+return as a target for \(V(S_t)\). A simple every-visit MC method suitable for
+non-stationary environments is
+
+\begin{equation}
+V(S_t) \leftarrow V(S_t) + \alpha [ G_t - V(S_t)],
+\end{equation}
+
+where \(G_t\) is the actual return following time \(t\), and \(\alpha\) is a constant
+step-size parameter. Whereas the MC method must wait until the end of the
+episode to determine the increment to \(V(S_t)\) (only then is \(G_t\) known), TD
+methods need to wait only until the next time step. The simplest TD method makes
+the update
+
+\begin{equation}
+V(S_t) \leftarrow V(S_t) + \alpha [ R_{t+1} + \gamma V(S_{t+1})- V(S_t)],
+\end{equation}
+
+immediately on transition to \(S_{t+1}\) and receiving \(R_{t+1}\). In effect, the
+target for the Monte Carlo update is \(G_t\), whereas the target for the TD update
+is \(R_{t+1} + \gamma V(S_{t+1})\). This method is called \textbf{TD(0)}, or \textbf{one-step
+TD}, because it is a special case of the TD(\(\lambda\)) and n-step TD methods.
+\newline
+\newline
+\begin{algorithm}[H]
+Input: the policy $\pi$ to be evaluated \\
+Algorithm parameters: step size $\alpha \in (0,1]$, small $\epsilon > 0$ \\
+Initialize $V(s)$, for all $s \in \mathcal{S}^+$, arbitrarily except that $V(terminal) = 0$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize $S$
+  \For{each step of episode}{
+    $A \leftarrow$ action given by $\pi$ for $S$ \\
+    Take action $A$, observe $R, S'$ \\
+    $V(S) \leftarrow V(S) + \alpha [R + \gamma V(S') - V(S)]$ \\
+    $S \leftarrow S'$\\
+  }
+  until $S$ is terminal
+}
+\;
+\caption{Tabular TD(0) for estimating $v_\pi$}
+\end{algorithm}
+
+Because TD(0) bases its update in part on existing estimate, we say that it is a
+bootstrapping method, like DP. TD methods combine the sampling of Monte Carlo
+with the bootstrapping of DP. We refer to TD and Monte Carlo updates as sample
+updates because they involve looking ahead to a sample successor state (or
+state–action pair).
+
+Note that the update include the \textbf{TD error}, that arises in various forms
+throughout reinforcement learning:
+\begin{equation}
+\delta_t \doteq R_{t+1} + \gamma V(S_{t+1}) - V(S_{t}).
+\end{equation}
+The TD error, is the error in \(V(S_t)\) available at time \(t+1\).
+
+\subsection{Advantages of TD Prediction Methods}
+\label{sec:orgff98380}
+
+TD(0) has been proved to converge to \(v_\pi\), in the mean for a constant
+step-size parameter if it is sufficiently small, and with probability 1 if the
+step-size parameter decreases according to the usual stochastic approximation
+conditions. In practice, however, TD methods have usually been found to converge
+faster than constant-\(\alpha\) MC methods on stochastic tasks.
+
+\subsection{Optimality of TD(0)}
+\label{sec:orgba50653}
+
+With TD methods, given a finite amount of experience, increments to a specific
+part of the value function are computed at every time step, but the value
+function is changed only once, by the sum of all the increments. In \textbf{batch
+updating} all the available experience is processed repeatedly until the value
+function converges.
+
+Whereas batch MC methods will give a lower RMS error on the training data, it
+does not take into account value information that is related to the Markov
+process nature of the environment because the value of each state is computed
+only from the specific sequence of states that were experienced. On the other
+hand, the TD algorithm takes into account value information that is dependent on
+the underlying Markov process. Given a MDP, we can compute the estimate of the
+value function that would be exactly correct if the model were exactly correct.
+This is called the \textbf{certainty-equivalence estimate} because it is equivalent to
+assuming that the estimate of the underlying process was known with certainty
+rather than being approximated. In general, batch TD(0) converges to the
+certainty-equivalence estimate. This is the reason why TD methods converge
+faster than MC methods. Also, on tasks with large state spaces, TD methods may
+be the only feasible way of approximating the certainty-equivalence solution.
+
+\subsection{Sarsa: On-policy TD Control}
+\label{sec:orge205634}
+
+We are now interested in learning the value of state-action pairs (action
+values) instead of states.
+
+\begin{equation}
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma Q(S_{t+1}, A_{t+1}) - Q(S_t, A_t)].
+\end{equation}
+
+This update is done after every transition from a non-terminal state \(S_t\). If
+\(S_{t+1}\) is terminal, then \(Q(S_{t+1}, A_{t+1})\) is defined as zero. This rule
+uses every element of the quintuple of events (\(S_t, A_t, R_{t+1}, S_{t+1},
+A_{t+1}\)), that gives rise to the name Sarsa.
+\newline
+\newline
+\begin{algorithm}[H]
+Algorithm parameters: step size $\alpha \in (0,1]$, small $\epsilon > 0$ \\
+Initialize $Q(s,a)$, for all $s \in \mathcal{S}^+, a \in \mathcal{A}(s)$, arbitrarily except that $Q(terminal, .) = 0$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize $S$ \\
+  Choose $A$ from $S$ using policy derived from $Q$ (e.g., $\epsilon{\text -}$greedy)\\
+  \For{each step of episode}{
+    Take action $A$, observe $R, S'$ \\
+    Choose $A'$ from $S'$ using policy derived from $Q$ (e.g., $\epsilon{\text -}$greedy)\\
+    $Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma Q(S', A') - Q(S, A)]$ \\
+    $S \leftarrow S'; A \leftarrow A';$\\
+  }
+  until $S$ is terminal
+}
+\;
+\caption{Sarsa (on-policy TD control) for estimating $Q \approx q_*$}
+\end{algorithm}
+
+\subsection{Q-learning: Off-policy TD Control}
+\label{sec:orgf4aa38f}
+
+One of the early breakthroughs in reinforcement learning was the development of
+an off-policy TD control algorithm known as \textbf{Q-learning} (Watkins, 1989),
+defined by
+
+\begin{equation}
+Q(S_t, A_t) \leftarrow Q(S_t, A_t) + \alpha [R_{t+1} + \gamma \max_{a} Q(S_{t+1}, a) - Q(S_t, A_t)].
+\end{equation}
+Note: unlike Sarsa, the action value is updated with the maximum action value of
+the following state, which is not necessarily the value of the action chosen by
+the behavior policy, hence it is an off-policy method.
+\newline
+\newline
+\begin{algorithm}[H]
+Algorithm parameters: step size $\alpha \in (0,1]$, small $\epsilon > 0$ \\
+Initialize $Q(s,a)$, for all $s \in \mathcal{S}^+, a \in \mathcal{A}(s)$, arbitrarily except that $Q(terminal, .) = 0$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize $S$ \\
+  \For{each step of episode}{
+    Choose $A$ from $S$ using policy derived from $Q$ (e.g., $\epsilon{\text -}$greedy)\\
+    Take action $A$, observe $R, S'$ \\
+    $Q(S, A) \leftarrow Q(S, A) + \alpha [R + \gamma \max_a Q(S', a) - Q(S, A)]$ \\
+    $S \leftarrow S'$ \\
+  }
+  until $S$ is terminal
+}
+\;
+\caption{Q-learning (off-policy TD control) for estimating $Q \approx q_*$}
+\end{algorithm}
+
+\subsection{Expected Sarsa}
+\label{sec:org8a00ca1}
+
+Consider the learning algorithm that is just like Q-learning except that instead
+of the maximum over next state–action pairs it uses the expected value, taking
+into account how likely each action is under the current policy. That is,
+consider the algorithm with the update rule
+
+\begin{equation}
+\begin{aligned}
+Q(S_t, A_t) & \leftarrow Q(S_t, A_t) + \alpha \big[ R_{t+1} + \gamma \mathbb{E}[Q(S_{t+1}, A_{t+1}) \mid S_{t+1}] - Q(S_t, A_t)\big] \\
+            & \leftarrow Q(S_t, A_t) + \alpha \big[ R_{t+1} + \gamma \sum\limits_{a} \pi(a|S_{t+1}) Q(S_{t+1}, a) - Q(S_t, A_t)\big]
+\end{aligned}
+\end{equation}
+
+but that otherwise follows the schema of Q-learning. Given the next state,
+\(S_{t+1}\), this algorithm moves deterministically in the same direction as Sarsa
+moves in expectation, and accordingly it is called Expected Sarsa.
+
+\subsection{Maximization Bias and Double Learning}
+\label{sec:orgcd5ec82}
+
+Maximization is involved in the computation of target policies. For example, in
+Q-learning, the target policy is the greedy policy given the current action
+values, which is defined with a max. In some cases, for example when the reward
+associated with an action is randomly distributed, the value of an action will
+be overestimated, and this overestimation will be passed on to previous
+state-action, shifting the behavior towards actions that in fact have a lower
+return.
+
+To prevent this, there exists a method called \textbf{Double Learning}, in which two
+sets of action-values \(Q_1\) and \(Q_2\) are learned.
+
+\begin{equation}
+Q_1(S_t, A_t) \leftarrow Q_1(S_t, A_t) + \alpha [R_{t+1} + \gamma Q_2(S_{t+1}, \argmax_{a} Q_1(S_{t+1}, a)) - Q_1(S_t, A_t)]
+\end{equation}
+
+\begin{algorithm}[H]
+Algorithm parameters: step size $\alpha \in (0,1]$, small $\epsilon > 0$ \\
+Initialize $Q_1(s,a)$ and $Q_2(s,a)$, for all $s \in \mathcal{S}^+, a \in \mathcal{A}(s)$, arbitrarily except that $Q(terminal, .) = 0$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize $S$ \\
+  \For{each step of episode}{
+    Choose $A$ from $S$ using the policy $\epsilon{\text -}$greedy in $Q_1 + Q_2$\\
+    Take action $A$, observe $R, S'$ \\
+    With 0.5 probability: \\
+         \quad $Q_1(S, A) \leftarrow Q_1(S, A) + \alpha [R + \gamma Q_2(S', \argmax_{a} Q_1(S', a)) - Q_1(S, A)]$ \\
+    else: \\
+         \quad $Q_2(S, A) \leftarrow Q_2(S, A) + \alpha [R + \gamma Q_1(S', \argmax_{a} Q_2(S', a)) - Q_2(S, A)]$ \\
+    $S \leftarrow S'$ \\
+  }
+  until $S$ is terminal
+}
+\;
+\caption{Q-learning (off-policy TD control) for estimating $Q \approx q_*$}
+\end{algorithm}
+
+\subsection{Games, Afterstates, and Other Special Cases}
+\label{sec:org1209166}
+
+In some cases (e.g. the tic-tac-toe game) the environment is better represented
+with afterstate-value functions than with action-values functions, when
+different state-action pairs lead to the same afterstate (state of the
+environment after an action was taken in a given state). In this case,
+afterstate value function will assess state-action pairs that lead to the same
+afterstate equally immediately after an action that led to that afterstate.
+Generalized policy iteration applies to afterstate value functions as well, with
+on- or off-policy methods.
+
+\section{n-step Bootstrapping}
+\label{sec:orgc53d5d1}
+
+So far the TD learning algorithm were looking one step back in the past to
+update the value of an action. n-step TD learning look back n steps in the past.
+
+\subsection{n-step TD Prediction}
+\label{sec:orgf43e67f}
+
+Here is the MC method (refresher):
+
+\begin{equation}
+G_t \doteq R_{t+1} + \gamma R_{t+2} + \gamma^2 R_{t+3} + {...} + \gamma^{T-t-1} R_T
+\end{equation}
+
+and here is what a one-step return looks like (refresher as well):
+
+\begin{equation}
+G_{t:t+1} \doteq R_{t+1} + \gamma V_t(S_{t+1})
+\end{equation}
+
+\(G_{t:t+1}\) indicate that this is a truncated return and \(V_t(S_{t+1})\) takes
+the place of the subsequent returns.
+
+Now, here is what a two-step return looks like:
+
+\begin{equation}
+G_{t:t+2} \doteq R_{t+1} + \gamma R_{t+2} + \gamma^2 V_{t+1}(S_{t+2})
+\end{equation}
+
+and more generally a n-step return:
+
+\begin{equation}
+G_{t:t+n} \doteq R_{t+1} + \gamma R_{t+2} + {...} + \gamma^{n-1} R_{t+n} + \gamma^n V_{t+n-1}(S_{t+n})
+\end{equation}
+
+If \(t+n \geq T\) (if the n-step return extends to or beyond termination), then
+all the missing terms are taken as zero, and the n-step return defined to be
+equal to the ordinary full return (\(G_{t:t+n} \doteq G_t\) if \(t+n \geq T\)).
+
+Of course, the update to the value function happens only n-step after a state is
+encountered:
+
+\begin{equation}
+V_{t+n}(S_t) \doteq V_{t+n-1}(S_t) + \alpha [G_{t:t+n} - V_{t+n-1}(S_t)], \quad 0 \leq t < T
+\end{equation}
+
+here (as a reminder), \(V_{t+n}(S_t)\) is the value at time \(t+n\) of the state
+\(S_t\). The values of all other states remain unchanged: \(V_{t+n}(s) =
+V_{t+n-1}(s)\) for all \(s \neq S_t\). We call this algorithm \textbf{n-step TD}.
+
+\begin{algorithm}[H]
+Input: a policy $\pi$ \\
+Algorithm parameters: step size $\alpha \in (0,1]$, a positive integer $n$ \\
+Initialize $V(s)$ arbitrarily for all $s \in \mathcal{S}$ \\
+All store and access operations (for $S_t$ and $R_t$) can take their index mod $n+1$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize and store $S_0 \neq$ terminal \\
+  $T \leftarrow \infty$ \\
+  \For{each step of episode}{
+    \If{$t < T$}{
+      Take an action according to $\pi(.|S_t)$ \\
+      Observe and store the next reward as $R_{t+1}$ and the next state as $S_{t+1}$ \\
+      if $S_{t+1}$ is terminal, then $T \leftarrow t+1$ \\
+    }
+    $\tau \leftarrow t-n+1$ \quad ($\tau$ is the time whose state's estimate is being updated) \\
+    \If{$\tau \geq 0$:}{
+      $G \leftarrow \sum_{i=\tau+1}^{min(\tau+n, T)} \gamma^{i-\tau-1} R_i$ \\
+      if $\tau + n < T$, then: $G \leftarrow G + \gamma^n V(S_{\tau+n})$ \quad \quad ($G_{\tau:\tau+n}$) \\
+      $V(S_\tau) \leftarrow V(S_\tau) + \alpha [G - V(S_\tau)]$ \\
+    }
+  }
+  until $\tau = T-1$ \\
+}
+\;
+\caption{n-step TD for estimating $V \approx v_\pi$}
+\end{algorithm}
+
+The expectation of returns with the n-step TD is guaranteed to be better than
+with one-step TD, which means that the n-step approach also converges.
+
+The right number 'n' of steps in the n-step TD will vary depending on the task,
+and is usually intermediate between MC method and one-step TD.
+
+\subsection{n-step Sarsa}
+\label{sec:orgbbad391}
+
+We already covered Sarsa, which was a special case that we can call the one-step
+Sarsa or Sarsa(0). The main idea is to simply switch states for actions
+(state–action pairs) and then use an \(\epsilon\)-greedy policy.
+
+We redefine n-step returns (update targets) in terms of estimated action values:
+
+\begin{equation}
+G_{t:t+n} \doteq R_{t+1} + \gamma R_{t+2} + {...} + \gamma^{n-1} R_{t+n} + \gamma^{n} Q_{t+n-1}(S_{t+n}, A_{t+n}), \quad n \geq 1, 0 \leq t < T-n,
+\end{equation}
+
+with \(G_{t:t+n} \doteq G_t\) if \(t + n \geq T\). The natural algorithm is then
+
+\begin{equation}
+Q_{t+n}(S_t, A_t) \doteq Q_{t+n-1}(S_t, A_t) + \alpha [G_{t:t+n} - Q_{t+n-1}(S_t, A_t)], \quad 0 \leq t < T,
+\end{equation}
+
+\begin{algorithm}[H]
+Initialize $Q(s,a)$ arbitrarily, for all $s \in \mathcal{S}, a \in \mathcal{A}$ \\
+Initialize $\pi$ to be $\epsilon{\text -}$greedy with respect to $Q$, or to a fixed given policy \\
+Algorithm parameters: step size $\alpha \in (0,1]$, small $\epsilon > 0$, a positive integer $n$ \\
+All store and access operations (for $S_t, A_t$ and $R_t$) can take their index mod $n$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize and store $S_0 \neq$ terminal \\
+  $T \leftarrow \infty$ \\
+  \For{each step of episode}{
+    \If{$t < T$}{
+      Take action $A_t$ \\
+      Observe and store the next reward as $R_{t+1}$ and the next state as $S_{t+1}$ \\
+      \uIf{$S_{t+1}$ is terminal}{
+        $T \leftarrow t+1$ \\
+      }\Else{
+        Select and store an action $A_{t+1} \sim \pi(.|S_{t+1})$ \\
+      }
+    }
+    $\tau \leftarrow t-n+1$ \quad ($\tau$ is the time whose state's estimate is being updated) \\
+    \If{$\tau \geq 0$:}{
+      $G \leftarrow \sum_{i=\tau+1}^{min(\tau+n, T)} \gamma^{i-\tau-1} R_i$ \\
+      if $\tau + n < T$, then: $G \leftarrow G + \gamma^n Q(S_{\tau+n}, A_{\tau+n})$ \quad \quad ($G_{\tau:\tau+n}$) \\
+      $Q(S_{\tau}, A_{\tau}) \leftarrow Q(S_{\tau}, A_{\tau}) + \alpha [G - Q(S_{\tau}, A_{\tau})]$ \\
+      If $\pi$ is being learned, then ensure that $\pi(.|S_\tau)$ is $\epsilon{\text -}$greedy wrt $Q$ \\
+    }
+  }
+  Until $\tau = T-1$ \\
+}
+\;
+\caption{n-step Sarsa estimating $Q \approx q_*$ or $q_\pi$}
+\end{algorithm}
+
+Expected Sarsa can also be formulated in the context of n-step TD:
+
+\begin{equation}
+G_{t:t+n} \doteq R_{t+1} + {...} + \gamma^{n-1} R_{t+n} + \gamma^{n} \sum\limits_{a} \pi(a|S_{t+n}) Q_{t+n-1}(S_{t+n},a)
+\end{equation}
+for all \(n\) and \(t\) such that \(n \geq 1\) and \(0 \geq t \geq T - n\).
+
+\subsection{n-step Off-policy Learning by Importance Sampling}
+\label{sec:orgc4d012e}
+
+To make a simple off-policy version of n-step TD, the update for time \(t\)
+(actually made at time \(t + n\)) can simply be weighted by \(\rho_{t:t+n-1}\):
+
+\begin{equation}
+V_{t+n}(S_t) \doteq V_{t+n-1}(S_t) + \alpha \rho_{t:t+n-1} [G_{t:t+n} - V_{t+n-1}(S_t)], \quad 0 \leq t < T
+\end{equation}
+
+where \(\rho_{t:t+n-1}\), called the importance sampling ratio, is the relative
+probability under the two policies of taking the n actions from \(A_t\) to
+\(A_{t+n-1}\):
+
+\begin{equation}
+\rho_{t:h} \doteq \prod\limits_{k=t}^{min(h, T-1)} \frac{\pi(A_k|S_k)}{b(A_k|S_k)}
+\end{equation}
+
+Note that if any one of the actions would never be taken by \(\pi\) (i.e.,
+\(\pi(A_k|S_k) = 0)\) then the n-step return should be given zero weight and be totally
+ignored.
+
+Here is an n-step Sarsa with importance sampling:
+
+\begin{equation}
+Q_{t+n}(S_t, A_t) \doteq Q_{t+n-1}(S_t, A_t) + \alpha \rho_{t+1:t+n-1} [G_{t:t+n} - Q_{t+n-1}(S_t, A_t)],
+\end{equation}
+
+for \(0 \leq t < T\). Note that the importance sampling ratio starts one step
+later than for n-step TD because we are updating a state-action pair. The n-step
+Expected Sarsa with importance sampling would have one less factor:
+\(\rho\)\textsubscript{t+1:t+n-2} instead of \(\rho\)\textsubscript{t+1:t+n-1}.
+
+\begin{algorithm}[H]
+Input: an arbitrary behavior policy $b$ such that $b(a|s) > 0$, for all $s \in \mathcal{S}, a \in \mathcal{A}$ \\
+Initialize $Q(s,a)$ arbitrarily, for all $s \in \mathcal{S}, a \in \mathcal{A}$ \\
+Initialize $\pi$ to be greedy with respect to $Q$, or to a fixed given policy \\
+Algorithm parameters: step size $\alpha \in (0,1]$, a positive integer $n$ \\
+All store and access operations (for $S_t, A_t$ and $R_t$) can take their index mod $n + 1$ \\
+
+\;
+\While{True (for each episode)}{
+  Initialize and store $S_0 \neq$ terminal \\
+  Select and store and action $A_0 \sim b(.|S_o)$ \\
+  $T \leftarrow \infty$ \\
+  \For{each step of episode}{
+    \If{$t < T$}{
+      Take action $A_t$ \\
+      Observe and store the next reward as $R_{t+1}$ and the next state as $S_{t+1}$ \\
+      \uIf{$S_{t+1}$ is terminal}{
+        $T \leftarrow t+1$ \\
+      }\Else{
+        Select and store an action $A_{t+1} \sim b(.|S_{t+1})$ \\
+      }
+    }
+    $\tau \leftarrow t-n+1$ \quad ($\tau$ is the time whose state's estimate is being updated) \\
+    \If{$\tau \geq 0$:}{
+      $\rho \leftarrow \prod_{i=\tau+1}^{min(\tau+n-1,T-1)} \frac{\pi(A_i|S_i)}{b(A_i|S_i)} \quad (\rho_{\tau+1:t+n-1})$ \\
+      $G \leftarrow \sum_{i=\tau+1}^{min(\tau+n, T)} \gamma^{i-\tau-1} R_i$ \\
+      if $\tau + n < T$, then: $G \leftarrow G + \gamma^n Q(S_{\tau+n}, A_{\tau+n})$ \quad \quad ($G_{\tau:\tau+n}$) \\
+      $Q(S_{\tau}, A_{\tau}) \leftarrow Q(S_{\tau}, A_{\tau}) + \alpha \rho [G - Q(S_{\tau}, A_{\tau})]$ \\
+      If $\pi$ is being learned, then ensure that $\pi(.|S_\tau)$ is $\epsilon{\text -}$greedy wrt $Q$ \\
+    }
+  }
+  Until $\tau = T-1$ \\
+}
+\;
+\caption{Off-policy n-step Sarsa estimating $Q \approx q_*$ or $q_\pi$}
+\end{algorithm}
+
+\subsection{Per-decision Off-policy Methods with Control Variates}
+\label{sec:orgeee6b2b}
+
+
+
+\subsection{Off-policy Learning Without Importance Sampling: The n-step Tree Backup Algorithm}
+\label{sec:org00922d9}
+
+So far in the n-step TD algorithms, we have always updated the estimated value
+of a state or action toward a target combining the rewards of successive steps
+and the estimated values of the last step. In the tree-backup update, the target
+includes all these things plus the estimated values of the unchosen actions at
+every step. This is why it is called a \textbf{tree-backup update}; it is an update from
+the entire tree of estimated action values.
+
+The value of unchosen actions are weighted by the probability of choosing their
+corresponding actions obtained from the probability of the successive actions
+that lead to the state of the unchosen action. Each first-level unchosen action
+\(a\) contributes with a weight of \(\pi(a|S_{t+1})\), and each second-level
+unchosen action contributes with weight \(\pi(A_{t+1}|S_{t+1})\pi(a'|S_{t+2})\),
+etc.
+
+The one-step return (target) of the tree backup algorithm is the same as that of
+Expected Sarsa:
+
+\begin{equation}
+G_{t:t+1} \doteq R_{t+1} + \gamma \sum\limits_a \pi(a|S_{t+1})Q_t(S_{t+1},a), \quad t < T-1
+\end{equation}
+
+and the two-step tree-backup return is:
+
+\begin{equation}
+\begin{aligned}
+G_{t:t+2} &\doteq R_{t+1} + \gamma \sum\limits_{a \neq A_{t+1}} \pi(a|S_{t+1})Q_{t+1}(S_{t+1},a) +
+\gamma \pi(A_{t+1}|S_{t+1}) \left(R_{t+2} + \gamma \sum\limits_a \pi(a|S_{t+2})Q_{t+1}(S_{t+2},a)\right) \\
+          &= R_{t+1} + \gamma \sum\limits_{a \neq A_{t+1}} \pi(a|S_{t+1})Q_{t+1}(S_{t+1},a) +
+\gamma \pi(A_{t+1}|S_{t+1}) G_{t+1:t+2}, \quad t<T-2.
+\end{aligned}
+\end{equation}
+
+The latter form suggest the general recursive definition of the tree-backup
+n-step return:
+
+\begin{equation}
+G_{t:t+n} \doteq R_{t+1} + \gamma \sum\limits_{a \neq A_{t+1}} \pi(a|S_{t+1})Q_{t+n-1}(S_{t+1},a) +
+\gamma \pi(A_{t+1}|S_{t+1}) G_{t+1:t+n}, \quad t+1<T, n>1.
+\end{equation}
+
+with the \(n=1\) case handled by \(G_{T-1:T} \doteq R_T\). This target is then used
+with the usual action-value update rule from n-step Sarsa (same equation):
+
+\begin{equation}
+Q_{t+n}(S_t, A_t) \doteq Q_{t+n-1}(S_t, A_t) + \alpha [G_{t:t+n} - Q_{t+n-1}(S_t, A_t)], \quad 0 \leq t < T,
+\end{equation}
+
+\begin{algorithm}[H]
+Initialize $Q(s,a)$ arbitrarily, for all $s \in \mathcal{S}, a \in \mathcal{A}$ \\
+Initialize $\pi$ to be greedy with respect to $Q$, or to a fixed given policy \\
+Algorithm parameters: step size $\alpha \in (0,1]$, a positive integer $n$ \\
+All store and access operations (for $S_t, A_t$ and $R_t$) can take their index mod $n + 1$ \\
+\;
+\While{True (for each episode)}{
+  Initialize and store $S_0 \neq$ terminal \\
+  Choose an action $A_0$ arbitrarily as a function of $S_0$; Store $A_0$ \\
+  $T \leftarrow \infty$ \\
+  \For{each step of episode}{
+    \If{$t < T$}{
+      Take action $A_t$ \\
+      Observe and store the next reward as $R_{t+1}$ and the next state as $S_{t+1}$ \\
+      \uIf{$S_{t+1}$ is terminal}{
+        $T \leftarrow t+1$ \\
+      }\Else{
+        Choose an action $A_{t+1}$ arbitrarily as a function of $S_{t+1}$; Store $A_{t+1}$ \\
+      }
+    }
+    $\tau \leftarrow t-n+1$ \quad ($\tau$ is the time whose state's estimate is being updated) \\
+    \If{$\tau \geq 0$}{
+      \uIf{$t+1 \geq T$}{
+        $G \leftarrow R_T$ \\}
+      \Else{
+        $G \leftarrow R_{t+1} + \gamma \sum_a \pi(a|S_{t+1})Q(S_{t+1},a)$ \\
+      }
+      \For{$k = min(t,T-1)$ down through $\tau + 1$}{
+        $G \leftarrow R_k + \gamma \sum_{a\neq A_k} \pi(a|S_k)Q(S_k,a) + \gamma \pi(A_k,S_k)G$ \\
+      }
+      $Q(S_{\tau}, A_{\tau}) \leftarrow Q(S_{\tau}, A_{\tau}) + \alpha [G - Q(S_{\tau}, A_{\tau})]$ \\
+      If $\pi$ is being learned, then ensure that $\pi(.|S_\tau)$ is greedy wrt $Q$ \\
+    }
+  }
+  Until $\tau = T-1$ \\
+}
+\;
+\caption{n-step Tree Backup for estimating $Q \approx q_*$ or $q_\pi$}
+\end{algorithm}
+
+\section{Planning and Learning with Tabular Methods}
+\label{sec:org3b1f043}
+
+This chapter is about \textbf{model-based} and \textbf{model-free} RL. Dynamic programming and
+heuristic searches are model based and, Monte Carlo and temporal difference
+methods are model free. This chapter aims to unify these approaches.
+
+\subsection{Models and Planning}
+\label{sec:orgb149da6}
+
+A model predicts the resulting state and reward of an action in a given state.
+\textbf{Distribution models} include all possibilities and their probabilities, like
+dynamic programming, and \textbf{sample models} produce just one of the possibilities,
+sampled according to the probabilities. Distribution models are more accurate
+and complete but more complicated to obtain. In either case, the model is used
+to simulate the environment and produce simulated experience. \textbf{Planning} refers
+to using a model to produce or improve a policy. Here planning refers to
+\textbf{state-space planning} which is a search through the state space for an optimal
+policy, as opposed to \textbf{plan-space planning} which is a search through the space
+of plans. There are two basic ideas:
+\begin{itemize}
+\item all state-space planning methods involve computing value functions as a
+key intermediate step toward improving the policy
+\item they compute value functions by updates or backup operations applied to
+simulated experience.
+\end{itemize}
+Dynamic programming methods clearly fit this structure: they make sweeps through
+the space of states, generating for each state the distribution of possible
+transitions. Each distribution is then used to compute a backed-up value (update
+target) and update the state’s estimated value.
+
+The heart of both learning and planning methods is the estimation of value
+functions by backing-up update operations. The difference is that whereas
+planning uses simulated experience generated by a model, learning methods use
+real experience generated by the environment. But here is an example of their
+similarity: \textbf{random-sample one-step tabular Q-planning} converges to the optimal
+policy for the model under the same conditions that one-step tabular Q-learning
+converges to the optimal policy for the real environment.
+\newline
+\newline
+\begin{algorithm}[H]
+\While{True (forever)}{
+  1. Select a state, $S \in \mathcal{S}$, and an action, $A \in \mathcal{A}(S)$, at random\\
+  2. Send $S,A$ to a sample model, and obtain a sample next reward, R, and a sample next state, $S'$\\
+  3. Apply one-step tabular Q-learning to $S,A,R,S'$:\\
+  \quad $Q(S,A) \leftarrow Q(S,A) + \alpha[R + \gamma \max_a Q(S', a) - Q(S,A)]$
+}
+\caption{Random-sample one-step tabular Q-planning}
+\end{algorithm}
+
+Planning in very small steps may be the most efficient approach even on pure
+planning problems if the problem is too large to be solved exactly.
+
+\subsection{Dyna: Integrating Planning, Acting, and Learning}
+\label{sec:org71e8dff}
+
+When planning is done on-line, while interacting with the environment, experience
+can be used to update the model. To address this approach we look at Dyna-Q, a
+simple architecture integrating the major functions needed in an on-line
+planning agent. Within a planning agent, real experience is used for \textbf{model
+learning} and \textbf{direct reinforcement learning}. \textbf{Indirect reinforcement learning}
+corresponds to planning.
+
+Dyna-Q is an example of a planning agent, that plans with the above
+random-sample one-step tabular Q-planning, uses one-step tabular Q-learning for
+direct RL and model learning is table-based and assumes the environment is
+deterministic. The table is filled in with experience. With more experience, the
+transitions in the environment are defined and planning improves.
+
+We use the term \textbf{search control} to refer to the process that selects the starting
+states and actions for the simulated experiences generated by the model.
+Planning and learning from real experience use the same method to update value
+and policy.
+
+\begin{algorithm}[H]
+Initialize $Q(s,a)$ and $Model(s,a)$ for all $s \in \mathcal{S}$ and $a \in \mathcal{A}(a)$\\
+\While{True (forever)}{
+  (a) $S \leftarrow$ current (nonterminal) state\\
+  (b) $A \leftarrow$ $\epsilon{\text -}$greedy($S,Q$)\\
+  (c) Take action $A$; observe resultant reward, $R$, and state, $S'$\\
+  (d) $Q(S,A) \leftarrow Q(S,A) + \alpha [R + \gamma \max_a Q(S',a)-Q(S,A)]$\\
+  (e) $Model(S,A) \leftarrow R,S'$ (assuming deterministic environment)\\
+  (f) \For{n times}{
+    $S \leftarrow$ random previously observed state\\
+    $A \leftarrow$ random action previously taken in $S$\\
+    $R,S' \leftarrow Model(S, A)$\\
+    $Q(S,A) \leftarrow Q(S,A) + \alpha [R+\gamma \max_a Q(S',a) - Q(S,A)]$\\
+  }
+}
+\caption{Tabular Dyna-Q}
+\end{algorithm}
+
+\subsection{When the Model Is Wrong}
+\label{sec:orgd459ea4}
+
+The Dyna-Q algorithm assumes a static and deterministic environment. This
+assumption leads this agent to be rather inflexible to changes to the
+environment, or at least, to take many steps to react appropriately.
+
+An improved algorithm, \textbf{Dyna-Q+}, prioritize planning associated to transitions
+that have not been explored in a while. Transitions (s,a) are more and more
+likely to be explored with time, their probability increases with \(r + \kappa
+\sqrt{\tau}\) where \(r\) is the reward associated with this transition, \(\kappa\)
+is a constant (parameter) and \(\tau\) is the number of time steps since the
+transition was last explored.
+
+This algorithm reacts faster to changes to the environment, especially if the
+previously optimal policy is still valid but no longer optimal.
+
+\subsection{Prioritized Sweeping}
+\label{sec:org0d3ca8b}
+
+Dyna agents update there value function with simulated transitions by selecting
+a state and action at random. It's a rather inefficient way of updating values
+since a lot of states have the same value, e.g. when the agent is just learning
+about the environment most of the states have value 0, assuming that this is the
+initial value given to all states. A better way is to explore the states that
+lead to a state whose value just changed: this is \textbf{backward focusing} of
+planning computations. \textbf{Prioritized sweeping} is used to update first the states
+whose value changed the most.
+
+\begin{algorithm}[H]
+Initialize $Q(s,a)$ and $Model(s,a)$ for all $s,a$, and $PQueue$ to empty\\
+\While{True (forever)}{
+  (a) $S \leftarrow$ current (nonterminal) state\\
+  (b) $A \leftarrow$ $policy(S,Q)$\\
+  (c) Take action $A$; observe resultant reward, $R$, and state, $S'$\\
+  (d) $Model(S,A) \leftarrow R,S'$\\
+  (e) $P \leftarrow |R + \gamma \max_a Q(S',a) - Q(S,a)|$\\
+  (f) if $P > \theta$, then insert $S,A$ into $PQueue$ with priority $P$\\
+  (g) \For{n times, while $PQueue$ is not empty}{
+          $S,A \leftarrow first(PQueue)$\\
+          $R,S' \leftarrow Model(S, A)$\\
+          $Q(S,A) \leftarrow Q(S,A) + \alpha [R + \gamma \max_a Q(S',a)-Q(S,A)]$\\
+          \For{all $\bar{S},\bar{A}$ predicted to lead to $S$}{
+              $\bar{R} \leftarrow$ predicted reward for $\bar{S},\bar{A},S$\\
+              $P \leftarrow |\bar{R} + \gamma \max_a Q(S,a) - Q(\bar{S},\bar{A})|$\\
+              if $P > \theta$ then insert $\bar{S},\bar{A}$ into $PQueue$ with priority $P$\\
+          }
+      }
+}
+\caption{Prioritized sweeping for a deterministic environment}
+\end{algorithm}
+
+This is issue with prioritize sweeping is that it updates all transitions to a
+state whose value changed, even the transitions with low probability. Updating
+value based on sampling by generating sample transitions from the model is a way
+to save computations by focusing more on the higher probability transitions.
+
+In contrast to backward focusing, \textbf{forward focusing} prioritize the state that
+are easily reached from the states that are visited frequently under the current
+policy.
+
+\subsection{Expected vs. Sample Updates}
+\label{sec:orga364074}
+
+The one-step updates that have been reviewed so far fall into two categories:
+expected or sample updates.
+
+The expected update for a state-action pair, \(s,a\), is:
+\begin{equation}
+Q(s,a) \leftarrow \sum\limits_{s',r}\hat{p}(s',r|s,a)\left[r+\gamma \max_{a'}
+Q(s',a')\right]
+\end{equation}
+The corresponding sample update for \(s,a\), given a sample next state and reward,
+\(S'\) and \(R\) (from the model), is the Q-learning-like update:
+\begin{equation}
+Q(s,a) \leftarrow Q(s,a) + \alpha \left[R + \gamma \max_{a'} Q(s',a') -
+Q(s,a)\right]
+\end{equation}
+where \(\alpha\) is the usual positive step-size parameter.
+
+One-step updates also differ on the value they estimate: the state values
+\(v_\pi(s)\), \(v_*(s)\), or the action values \(q_\pi(s,a)\), \(q_*(s,a)\), following a
+given policy \(\pi\) or the optimal policy:
+
+\begin{center}
+\begin{tabular}{lll}
+Value estimated & Expected updates (DP) & Sample updates (one-step TD)\\
+\(v_(s)\) & policy evaluation & TD(0)\\
+\(v_*(s)\) & value iteration & \\
+\(q_\pi(s,a)\) & q-policy evaluation & Sarsa\\
+\(q_*(s,a)\) & q-value iteration & Q-learning\\
+\end{tabular}
+\end{center}
+
+Expected updates yield better estimates but are more computationally expensive,
+especially when branching is high and when the environment is stochastic.
+
+\subsection{Trajectory Sampling}
+\label{sec:org77db218}
+
+Expected sample methods are inefficient because they have to produce a complete
+sweep of the state (or state-action) space for a single iteration which is
+problematic on large tasks, and because they sweep through states that are
+unlikely to be visited under an optimal policy. One way to sweep through
+relevant states with planning is to perform \textbf{trajectory sampling} where
+trajectories are generated with the model of state transitions following the
+current policy.\\
+Experiments with different branching factors show that trajectory sampling
+updates the initial state value faster than exhaustive search but hurt the
+update in the long run because it focuses too much on on-policy states.
+
+\subsection{Real-time Dynamic Programming}
+\label{sec:org88f9c27}
+\end{document}
